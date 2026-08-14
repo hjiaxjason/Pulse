@@ -4,9 +4,9 @@
 
 ### Installation
 
-\`\`\`base
+```base
 cargo install --path pulse
-\`\`\`
+```
 
 (Workspace member - installs the `pulse` binary from the `pulse` crate.)
 
@@ -14,30 +14,30 @@ cargo install --path pulse
 
 Add a manual entry any time:
 
-\`\`\`bash
+```bash
 pulse log "fixed decoder bug"
 pulse log "reviewed PR #44" --kind work
-\`\`\`
+```
 
 ### Viewing summaries
 
 Log consists of nudges completed + manual entries.
 
-\`\`\`bash
+```bash
 pulse today 
 pulse week
-\`\`\`
+```
 
 ### Configuring nudges
 
-\`\`\`bash
+```bash
 pulse config    # show current nudge config
-\`\`\`
+```
 
 Nudges (water, stand up, stretch) are defined in `~/.config/pulse/config.toml`:
 
 
-\`\`\`toml
+```toml
 [[nudge]]
 name = "water"
 interval = "1hr"
@@ -45,4 +45,4 @@ interval = "1hr"
 [[nudge]]
 name = "stretch"
 interval = "30m"
-\`\`\`
+```
