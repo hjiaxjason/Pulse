@@ -1,3 +1,5 @@
 # Pulse
-## Setup
-## Overview
+## How to Use
+\`\`\`base
+cargo install --path pulse-cli
+\`\`\`
