@@ -1,10 +1,29 @@
 use clap::Parser;
 
-#[derive(Parser)]
-struct Cli {
-    // Command
-    command: String,
-    // 
+// Root modules
+mod cli;
+mod commands;
+
+use cli::{Cli, Commands};
+
 fn main() {
-    println!("Hello, world!");
+    let args = Cli::Parse();
+
+    match args.command {
+        Commands::Log { message } => {
+            commands::log::execute(message);
+        }
+        Commands::Today => {
+            commands::log::execute();
+        }
+        Commands::Week => {
+            commands::week::execute();
+        }
+        Commands::Install => {
+            commands::install::execute();
+        }
+        Commands::Config => {
+            commands::config::execute();
+        }
+    }
 }
