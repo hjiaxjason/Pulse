@@ -84,16 +84,7 @@ fn entries_today(path_override: Option<&Path>) -> Result<Vec<LogEntry>> {
 
     let stream = serde_json::Deserializer::from_reader(reader).into_iter::<LogEntry>();
     let cutoff = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_sec() - 24 * 60 * 60;
-    let entries: Vec<LogEntry> = stream
-        .filter_map(|result| match result {
-            Ok(entry) => Some(entry),
-            Err(e) => {
-                eprintln!("Warning: Skipping corrupted log entry: {}", e);
-                None
-            }
-        })
-        .filter(|entry| entry.timestamp >= cutoff)
-        .collect();
+    let entries: Vec<LogEntry> = filter_logs_by_cutoff(stream, cutoff)?;
 
     Ok(entries)
 }
@@ -109,7 +100,13 @@ fn entries_this_week(path_override: Option<&Path>) -> Result<Vec<LogEntry>> {
 
     let stream = serde_json::Deserializer::from_reader(reader).into_iter::<LogEntry>();
     let cutoff = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_sec() - 7 * 24 * 60 * 60;
-    let entries: Vec<LogEntry> = stream
+    let entries: Vec<LogEntry> = filter_logs_by_cutoff(stream, cutoff)?;
+
+    Ok(entries)
+}
+
+fn filter_logs_by_cutoff(entries_stream: Vec<Result<LogEntry, String>>, cutoff: u64) -> Vec<LogEntry> {
+    entries_stream
         .filter_map(|result| match result {
             Ok(entry) => Some(entry),
             Err(e) => {
@@ -118,9 +115,7 @@ fn entries_this_week(path_override: Option<&Path>) -> Result<Vec<LogEntry>> {
             }
         })
         .filter(|entry| entry.timestamp >= cutoff)
-        .collect();
-
-    Ok(entries)
+        .collect()
 }
 
 
