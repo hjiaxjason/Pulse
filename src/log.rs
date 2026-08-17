@@ -73,6 +73,56 @@ fn read_all(path_override: Option<&Path>) -> Result<Vec<LogEntry>> {
     Ok(entries)
 }
 
+fn entries_today(path_override: Option<&Path>) -> Result<Vec<LogEntry>> {
+    let path = log_path(path_override)?;
+    if !path.exists() {
+        return Ok(vec![]);
+    }
+
+    let file = File::open(path)?;
+    let reader = BufReader::new(file);
+
+    let stream = serde_json::Deserializer::from_reader(reader).into_iter::<LogEntry>();
+    let cutoff = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_sec() - 24 * 60 * 60;
+    let entries: Vec<LogEntry> = stream
+        .filter_map(|result| match result {
+            Ok(entry) => Some(entry),
+            Err(e) => {
+                eprintln!("Warning: Skipping corrupted log entry: {}", e);
+                None
+            }
+        })
+        .filter(|entry| entry.timestamp >= cutoff)
+        .collect();
+
+    Ok(entries)
+}
+
+fn entries_this_week(path_override: Option<&Path>) -> Result<Vec<LogEntry>> {
+    let path = log_path(path_override)?;
+    if !path.exists() {
+        return Ok(vec![]);
+    }
+
+    let file = File::open(path)?;
+    let reader = BufReader::new(file);
+
+    let stream = serde_json::Deserializer::from_reader(reader).into_iter::<LogEntry>();
+    let cutoff = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_sec() - 7 * 24 * 60 * 60;
+    let entries: Vec<LogEntry> = stream
+        .filter_map(|result| match result {
+            Ok(entry) => Some(entry),
+            Err(e) => {
+                eprintln!("Warning: Skipping corrupted log entry: {}", e);
+                None
+            }
+        })
+        .filter(|entry| entry.timestamp >= cutoff)
+        .collect();
+
+    Ok(entries)
+}
+
 
 #[cfg(test)]
 mod tests {
