@@ -73,7 +73,7 @@ fn read_all(path_override: Option<&Path>) -> Result<Vec<LogEntry>> {
     Ok(entries)
 }
 
-fn entries_today(path_override: Option<&Path>) -> Result<Vec<LogEntry>> {
+pub fn entries_since(cutoff: DateTime<Utc>, path_override: Option<&Path>) -> Result<Vec<LogEntry>> {
     let path = log_path(path_override)?;
     if !path.exists() {
         return Ok(vec![]);
@@ -81,31 +81,20 @@ fn entries_today(path_override: Option<&Path>) -> Result<Vec<LogEntry>> {
 
     let file = File::open(path)?;
     let reader = BufReader::new(file);
-
     let stream = serde_json::Deserializer::from_reader(reader).into_iter::<LogEntry>();
-    let cutoff = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_sec() - 24 * 60 * 60;
-    let entries: Vec<LogEntry> = filter_logs_by_cutoff(stream, cutoff)?;
 
-    Ok(entries)
+    Ok(filter_logs_by_cutoff(stream, cutoff))
 }
 
-fn entries_this_week(path_override: Option<&Path>) -> Result<Vec<LogEntry>> {
-    let path = log_path(path_override)?;
-    if !path.exists() {
-        return Ok(vec![]);
-    }
-
-    let file = File::open(path)?;
-    let reader = BufReader::new(file);
-
-    let stream = serde_json::Deserializer::from_reader(reader).into_iter::<LogEntry>();
-    let cutoff = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_sec() - 7 * 24 * 60 * 60;
-    let entries: Vec<LogEntry> = filter_logs_by_cutoff(stream, cutoff)?;
-
-    Ok(entries)
+pub fn entries_today(path_override: Option<&Path>) -> Result<Vec<LogEntry>> {
+    entries_since(Utc::now() - Duration::hours(24), path_override)
 }
 
-fn filter_logs_by_cutoff(entries_stream: Vec<Result<LogEntry, String>>, cutoff: u64) -> Vec<LogEntry> {
+pub fn entries_this_week(path_override: Option<&Path>) -> Result<Vec<LogEntry>> {
+    entries_since(Utc::now() - Duration::days(7), path_override)
+}
+
+pub fn filter_logs_by_cutoff(entries_stream: impl Iterator<Item = Result<LogEntry, serde_json::Error>>, cutoff: DateTime<Utc>) -> Vec<LogEntry> {
     entries_stream
         .filter_map(|result| match result {
             Ok(entry) => Some(entry),
@@ -172,6 +161,33 @@ mod tests {
         assert_eq!(entries.get(1).unwrap().message, String::from("test message 2"));
         assert_eq!(entries.get(1).unwrap().kind, String::from("test"));
     }
+
+    #[test]
+    fn test_chrono_timestamp_filtering() {
+        let now = Utc::now();
+        let cutoff = now - Duration::days(7);
+
+        let mock_entries = vec![
+            // Both entries within cutoff, should keep
+            Ok(LogEntry { timestamp: now, message: String::from("test message"), kind: String::from("test") }),
+            Ok(LogEntry { timestamp: now - Duration::days(3), message: String::from("test message"), kind: String::from("test") }),
+            
+            // Exactly on cutoff boundary, should keep
+            Ok(LogEntry { timestamp: cutoff, message: String::from("test message"), kind: String::from("test") }),
+
+            // Just outside cutoff by an hour, should filter out
+            Ok(LogEntry { timestamp: cutoff - Duration::hours(1), message: String::from("test message"), kind: String::from("test") }),
+
+            // 12 days ago, filter out
+            Ok(LogEntry { timestamp: now - Duration::days(12), message: String::from("test message"), kind: String::from("test") }),
+
+            // Corrupted log line simulation, should filter out
+            Err("Malformed JSON string".to_string()),
+        ];
+
+        let result = filter_logs_by_cutoff(mock_entries, cutoff);
+
+        assert
 }
 
 
