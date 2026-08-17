@@ -7,14 +7,14 @@ mod commands;
 use cli::{Cli, Commands};
 
 fn main() {
-    let args = Cli::Parse();
+    let args = Cli::parse();
 
     match args.command {
         Commands::Log { message } => {
             commands::log::execute(message);
         }
         Commands::Today => {
-            commands::log::execute();
+            commands::today::execute();
         }
         Commands::Week => {
             commands::week::execute();

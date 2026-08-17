@@ -4,12 +4,12 @@ use clap::{Parser, Subcommand};
 #[command(
     name = "pulse", 
     version = "1.0",
-    author "Jason Huang (Github: github.com/hjiaxjason)",
+    author = "Jason Huang (Github: github.com/hjiaxjason)",
     about = "A CLI application for water and stretching breaks",
 )]
-struct Cli {
+pub struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    pub command: Commands,
 }
 
 #[derive(Subcommand)]
