@@ -3,6 +3,7 @@ use clap::Parser;
 // Root modules
 mod cli;
 mod commands;
+mod log;
 
 use cli::{Cli, Commands};
 

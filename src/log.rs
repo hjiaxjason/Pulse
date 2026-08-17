@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
 use std::path::PathBuf;
 use std::io::{BufRead, BufReader, Write};
-use std::fs::OpenOptions;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LogEntry {
@@ -17,12 +16,40 @@ fn log_path() -> Result<PathBuf> {
     let dir = dirs::data_local_dir()
         .context("Failed to find data local dir")?
         .join("pulse");
-    std::fs::create_dir_all(dir);
-    Ok(dir.join("log").set_extension("jsonl"));
+    let _ = std::fs::create_dir_all(&dir);
+
+    let mut path = dir.join("log");
+    path.set_extension("jsonl");
+    Ok(path)
 }
+
+fn append_entry(message: &str, kind: &str) -> Result<()> {
+    // Create entry
+    let entry = LogEntry {
+        timestamp: Utc::now(),
+        message: message.to_string(),
+        kind: kind.to_string(),
+    };
+
+    let json_string = serde_json::to_string(&entry)?;
+
+    // Open file in append and create-if-missing mode
+    let dir = log_path()?;
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(dir)?;
+
+    writeln!(file, "{}", json_string)?;
+
+    Ok(())
+}
+
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn test_log_path_returns_ok() {
         let path = log_path();
@@ -32,8 +59,14 @@ mod tests {
     #[test]
     fn test_log_path_ends_with_pulse_log_jsonl() {
         let path = log_path().unwrap();
-        assert!(path.ends_with("pulse/log.jsonl");
+        assert!(path.ends_with("pulse/log.jsonl"));
     }
+
+    #[test]
+    fn test_append_entry_returns_ok() {
+        assert!(append_entry("Finish debugging PR#45", "work").is_ok());
+    }
+
 }
 
 
