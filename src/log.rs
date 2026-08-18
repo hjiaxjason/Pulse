@@ -75,7 +75,7 @@ fn read_all(path_override: Option<&Path>) -> Result<Vec<LogEntry>> {
     Ok(entries)
 }
 
-pub fn entries_since(cutoff: DateTime<Utc>, path_override: Option<&Path>) -> Result<Vec<LogEntry>> {
+fn entries_since(cutoff: DateTime<Utc>, path_override: Option<&Path>) -> Result<Vec<LogEntry>> {
     let path = log_path(path_override)?;
     if !path.exists() {
         return Ok(vec![]);
