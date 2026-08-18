@@ -10,6 +10,7 @@ pub struct LogEntry {
     pub timestamp: DateTime<Utc>,
     pub message: String,
     pub kind: String, 
+    pub source: String, // "cli" | "mcp" | "nudge"
 }
 
 fn log_path(override_path: Option<&Path>) -> Result<PathBuf> {
@@ -27,7 +28,7 @@ fn log_path(override_path: Option<&Path>) -> Result<PathBuf> {
     Ok(path)
 }
 
-fn append_entry(message: &str, kind: &str, path_override: Option<&Path>) -> Result<()> {
+pub fn append_entry(message: &str, kind: &str, source: &str, path_override: Option<&Path>) -> Result<()> {
     // Open file in append and create-if-missing mode
     let dir = log_path(path_override)?;
     let mut file = OpenOptions::new()
@@ -40,6 +41,7 @@ fn append_entry(message: &str, kind: &str, path_override: Option<&Path>) -> Resu
         timestamp: Utc::now(),
         message: message.to_string(),
         kind: kind.to_string(),
+        source: source.to_string(),
     };
 
     let json_string = serde_json::to_string(&entry)?;
@@ -128,19 +130,20 @@ mod tests {
     fn test_append_entry_returns_ok() {
         let temp_file = tempfile::NamedTempFile::new().unwrap();
         
-        let result = append_entry("test message", "test", Some(temp_file.path()));
+        let result = append_entry("test message", "test", "cli", Some(temp_file.path()));
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_append_entry_updates_log() {
         let temp_file = tempfile::NamedTempFile::new().unwrap();
-        let _ = append_entry("test message 1", "test", Some(temp_file.path()));
+        let _ = append_entry("test message 1", "test", "cli", Some(temp_file.path()));
         let binding = read_all(Some(temp_file.path())).unwrap();
         let appended = binding.get(0);
 
         assert_eq!(appended.unwrap().message, String::from("test message 1"));
         assert_eq!(appended.unwrap().kind, String::from("test"));
+        assert_eq!(appended.unwrap().source, String::from("cli"));
     }
 
     #[test]
@@ -152,14 +155,16 @@ mod tests {
     #[test]
     fn test_read_all_works_for_multiple_entries() {
         let temp_file = tempfile::NamedTempFile::new().unwrap();
-        let _ = append_entry("test message 1", "test", Some(temp_file.path()));
-        let _ = append_entry("test message 2", "test", Some(temp_file.path()));
+        let _ = append_entry("test message 1", "test", "cli", Some(temp_file.path()));
+        let _ = append_entry("test message 2", "test", "cli", Some(temp_file.path()));
 
         let entries = read_all(Some(temp_file.path())).unwrap();
         assert_eq!(entries.get(0).unwrap().message, String::from("test message 1"));
         assert_eq!(entries.get(0).unwrap().kind, String::from("test"));
+        assert_eq!(entries.get(0).unwrap().source, String::from("cli"));
         assert_eq!(entries.get(1).unwrap().message, String::from("test message 2"));
         assert_eq!(entries.get(1).unwrap().kind, String::from("test"));
+        assert_eq!(entries.get(1).unwrap().source, String::from("cli"));
     }
 
     #[test]
@@ -169,17 +174,17 @@ mod tests {
 
         let mock_entries = vec![
             // Both entries within cutoff, should keep
-            Ok(LogEntry { timestamp: now, message: String::from("test message 1"), kind: String::from("test") }),
-            Ok(LogEntry { timestamp: now - Duration::days(3), message: String::from("test message 2"), kind: String::from("test") }),
+            Ok(LogEntry { timestamp: now, message: String::from("test message 1"), kind: String::from("test"), source: String::from("cli") }),
+            Ok(LogEntry { timestamp: now - Duration::days(3), message: String::from("test message 2"), kind: String::from("test"), source: String::from("cli") }),
             
             // Exactly on cutoff boundary, should keep
-            Ok(LogEntry { timestamp: cutoff, message: String::from("test message 3"), kind: String::from("test") }),
+            Ok(LogEntry { timestamp: cutoff, message: String::from("test message 3"), kind: String::from("test"), source: String::from("cli") }),
 
             // Just outside cutoff by an hour, should filter out
-            Ok(LogEntry { timestamp: cutoff - Duration::hours(1), message: String::from("test message 4"), kind: String::from("test") }),
+            Ok(LogEntry { timestamp: cutoff - Duration::hours(1), message: String::from("test message 4"), kind: String::from("test"), source: String::from("cli") }),
 
             // 12 days ago, filter out
-            Ok(LogEntry { timestamp: now - Duration::days(12), message: String::from("test message 5"), kind: String::from("test") }),
+            Ok(LogEntry { timestamp: now - Duration::days(12), message: String::from("test message 5"), kind: String::from("test"), source: String::from("cli") }),
 
             // Corrupted log line simulation, should filter out
             Err(serde_json::from_str::<LogEntry>("Malformed JSON string").unwrap_err()),

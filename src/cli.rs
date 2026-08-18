@@ -5,7 +5,7 @@ use clap::{Parser, Subcommand};
     name = "pulse", 
     version = "1.0",
     author = "Jason Huang (Github: github.com/hjiaxjason)",
-    about = "A CLI application for water and stretching breaks",
+    about = "A CLI application organizing work sessions",
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -15,7 +15,11 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     /// Add a manual entry with a work summary
-    Log { message: String },
+    Log { 
+        message: String,
+        #[arg(long)]
+        kind: Option<String>,
+    },
 
     /// Look at today's logs
     Today,

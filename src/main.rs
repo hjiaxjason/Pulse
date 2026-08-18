@@ -11,8 +11,8 @@ fn main() {
     let args = Cli::parse();
 
     match args.command {
-        Commands::Log { message } => {
-            commands::log::execute(message);
+        Commands::Log { message, kind } => {
+            commands::log::execute(message, kind).expect("Failed to execute log command");
         }
         Commands::Today => {
             commands::today::execute();
