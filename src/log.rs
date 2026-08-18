@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use chrono::{DateTime, Utc};
+use chrono::{Duration, DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
@@ -169,25 +169,30 @@ mod tests {
 
         let mock_entries = vec![
             // Both entries within cutoff, should keep
-            Ok(LogEntry { timestamp: now, message: String::from("test message"), kind: String::from("test") }),
-            Ok(LogEntry { timestamp: now - Duration::days(3), message: String::from("test message"), kind: String::from("test") }),
+            Ok(LogEntry { timestamp: now, message: String::from("test message 1"), kind: String::from("test") }),
+            Ok(LogEntry { timestamp: now - Duration::days(3), message: String::from("test message 2"), kind: String::from("test") }),
             
             // Exactly on cutoff boundary, should keep
-            Ok(LogEntry { timestamp: cutoff, message: String::from("test message"), kind: String::from("test") }),
+            Ok(LogEntry { timestamp: cutoff, message: String::from("test message 3"), kind: String::from("test") }),
 
             // Just outside cutoff by an hour, should filter out
-            Ok(LogEntry { timestamp: cutoff - Duration::hours(1), message: String::from("test message"), kind: String::from("test") }),
+            Ok(LogEntry { timestamp: cutoff - Duration::hours(1), message: String::from("test message 4"), kind: String::from("test") }),
 
             // 12 days ago, filter out
-            Ok(LogEntry { timestamp: now - Duration::days(12), message: String::from("test message"), kind: String::from("test") }),
+            Ok(LogEntry { timestamp: now - Duration::days(12), message: String::from("test message 5"), kind: String::from("test") }),
 
             // Corrupted log line simulation, should filter out
-            Err("Malformed JSON string".to_string()),
+            Err(serde_json::from_str::<LogEntry>("Malformed JSON string").unwrap_err()),
         ];
+        
+        let stream = mock_entries.into_iter();
+        let result = filter_logs_by_cutoff(stream, cutoff);
 
-        let result = filter_logs_by_cutoff(mock_entries, cutoff);
-
-        assert
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[0].message, String::from("test message 1"));
+        assert_eq!(result[1].message, String::from("test message 2"));
+        assert_eq!(result[2].message, String::from("test message 3"));
+    }
 }
 
 
