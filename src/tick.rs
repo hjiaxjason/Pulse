@@ -1,24 +1,14 @@
-use notify_rust::{Notification, Timeout};
-use std::error::Error;
 
-fn fire(nudge_name: &str) -> Result<()> {
-    let body = match nudge_name {
-        "water" => "It is time for your water break!",
-        "stretch" => "It is time for you stretch break!",
-        other => {
-            eprintln!("Warning: unknown nudge type '{other}', firing generic notification");
-            "Time for your break!"
+pub fn run_tick() -> Result<()> {
+    let mut app_state = state::load()?;
+    let cfg = config::load()?;
+    for nudge in &cfg.nudges {
+        if app_state.is_due(&nudge.name, nudge.interval) {
+            notify::fire(&nudge.name)?;
+            log::append_entry(&nudge.name, &format!("{} nudge", nudge.name), "nudge")?;
+            app_state.mark_fired(&nudge.name);
         }
-    };
-
-    Notification::new() {
-        .summary("Pulse Notification")
-        .body(body)
-        .icon("dialog-information")
-        .appname("Pulse")
-        .timeout(Timeout::Never)
-        .show()?;
-
+    }
+    state::save(&app_state)?;
     Ok(())
 }
-        

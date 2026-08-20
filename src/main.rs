@@ -4,6 +4,9 @@ use clap::Parser;
 mod cli;
 mod commands;
 mod log;
+mod config;
+mod state;
+mod notify;
 
 use cli::{Cli, Commands};
 
