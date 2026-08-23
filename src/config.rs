@@ -4,11 +4,12 @@ use anyhow::{Context, Result};
 use serde::{Serialize, Deserialize};
 use std::path::{Path, PathBuf};
 use std::fs::File;
+use chrono::TimeDelta;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     #[serde(default = "default_nudges")]
-    pub nudge: Vec<Nudge>,
+    pub nudges: Vec<Nudge>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -24,7 +25,7 @@ fn default_interval() -> String {
 
 fn default_nudges() -> Vec<Nudge> {
     vec![
-        Nudge { name: "water".to_string(), interval: "1hr".to_string() },
+        Nudge { name: "water".to_string(), interval: "1h".to_string() },
         Nudge { name: "stretch".to_string(), interval: "30m".to_string() },
     ]
 }
@@ -45,7 +46,7 @@ fn config_path(path_override: Option<&Path>) -> Result<PathBuf> {
 pub fn load(path_override: Option<&Path>) -> Result<Config> {
     let path = config_path(path_override)?;
     if !path.exists() {
-        return Ok(Config { nudge: default_nudges() });
+        return Ok(Config { nudges: default_nudges() });
     }
     let content = std::fs::read_to_string(path)?;
     let config: Config = toml::from_str(&content)?;
@@ -53,7 +54,7 @@ pub fn load(path_override: Option<&Path>) -> Result<Config> {
 }
 
 pub fn save(nudges: Vec<Nudge>, path_override: Option<&Path>) -> Result<()> {
-    let cfg = Config { nudge: nudges };
+    let cfg = Config { nudges: nudges };
 
     let path = config_path(path_override)?;
     let toml_str = toml::to_string_pretty(&cfg)?;
@@ -62,6 +63,32 @@ pub fn save(nudges: Vec<Nudge>, path_override: Option<&Path>) -> Result<()> {
 
     Ok(())
 }
+
+fn parse_duration(duration: &str) -> Result<TimeDelta> {
+    let duration = duration.trim();
+    
+    let (suffix, builder): (&str, fn(i64) => TimeDelta) = if duration.ends_with("mins") {
+        ("mins", TimeDelta::minutes)
+    } else if duration.ends_with("min") {
+        ("min", TimeDelta::minutes)
+    } else if (duration.ends_with("hr") {
+        ("hr", TImeDelta::hours)
+    } else if duration.ends_with('h') {
+        ("h", TimeDelta::hours)
+    } else if duration.ends_with('m') {
+        ("m", TimeDelta::minutes)
+    } else {
+        return Err(format!("Unsupported duration unit in: '{duration}'"));
+    };
+
+    let num_str = duration.strip_suffix(suffix).unwrap_or("").trim();
+    let num = num_str
+        .parse::<i64>()
+        .map_err(|e| format!("Failed to parse number in '{duration}': {e}"))?;
+
+    Ok(builder(num))
+}
+            
 
 #[cfg(test)]
 mod tests {
@@ -115,19 +142,19 @@ mod tests {
         let _ = save(nudges, Some(temp_file.path()));
         
         let cfg = load(Some(temp_file.path())).unwrap();
-        assert_eq!(cfg.nudge.get(0).unwrap().name, String::from("water"));
-        assert_eq!(cfg.nudge.get(0).unwrap().interval, String::from("90m"));
-        assert_eq!(cfg.nudge.get(1).unwrap().name, String::from("stretch"));
-        assert_eq!(cfg.nudge.get(1).unwrap().interval, String::from("30m"));
+        assert_eq!(cfg.nudges.get(0).unwrap().name, String::from("water"));
+        assert_eq!(cfg.nudges.get(0).unwrap().interval, String::from("90m"));
+        assert_eq!(cfg.nudges.get(1).unwrap().name, String::from("stretch"));
+        assert_eq!(cfg.nudges.get(1).unwrap().interval, String::from("30m"));
     }
 
     #[test]
     fn test_load_default_works() {
         let cfg = load(None).unwrap();
-        assert_eq!(cfg.nudge.get(0).unwrap().name, String::from("water"));
-        assert_eq!(cfg.nudge.get(0).unwrap().interval, String::from("1h"));
-        assert_eq!(cfg.nudge.get(1).unwrap().name, String::from("stretch"));
-        assert_eq!(cfg.nudge.get(1).unwrap().interval, String::from("30m"));
+        assert_eq!(cfg.nudges.get(0).unwrap().name, String::from("water"));
+        assert_eq!(cfg.nudges.get(0).unwrap().interval, String::from("1h"));
+        assert_eq!(cfg.nudges.get(1).unwrap().name, String::from("stretch"));
+        assert_eq!(cfg.nudges.get(1).unwrap().interval, String::from("30m"));
     }
 }
 

@@ -32,5 +32,8 @@ pub enum Commands {
     
     /// Configuring nudges
     Config,
+
+    /// Tick
+    Tick,
 }
 

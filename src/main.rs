@@ -6,7 +6,9 @@ mod commands;
 mod log;
 mod config;
 mod state;
-mod notify;
+pub mod notify;
+mod tick;
+mod daemon;
 
 use cli::{Cli, Commands};
 

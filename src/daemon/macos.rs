@@ -1,11 +1,12 @@
 use anyhow::Result;
+use anyhow::Context;
 use std::fs;
 use std::path::PathBuf;
 
 fn plist_path() -> Result<PathBuf> {
     let dir = dirs::home_dir()
         .context("could not determine home directory")?
-        .join("Library/LaunchAgents")
+        .join("Library/LaunchAgents");
 
     std::fs::create_dir_all(dir)?;
     Ok(dir.join("com.pulse.tick.plist"))

@@ -1,14 +1,17 @@
+/// Scheduler for nudges
+use anyhow::Result;
+use crate::{config, notify, log, state};
 
 pub fn run_tick() -> Result<()> {
-    let mut app_state = state::load()?;
-    let cfg = config::load()?;
-    for nudge in &cfg.nudges {
-        if app_state.is_due(&nudge.name, nudge.interval) {
-            notify::fire(&nudge.name)?;
-            log::append_entry(&nudge.name, &format!("{} nudge", nudge.name), "nudge")?;
-            app_state.mark_fired(&nudge.name);
+    let mut app_state = state::AppState::load(None)?; // Correct
+    let cfg = config::load(None)?; // Correct
+    for nudge in &cfg.nudges { // Correct
+        if app_state.is_due(&nudge.name, nudge.interval) { // Correct
+            notify::fire(&nudge.name)?; // Correct
+            log::append_entry(&nudge.name, &format!("{} nudge", nudge.name), "nudge", None)?;
+            app_state.mark_fired(&nudge.name); // Correct
         }
     }
-    state::save(&app_state)?;
+    app_state.save(None)?; // Correct
     Ok(())
 }
