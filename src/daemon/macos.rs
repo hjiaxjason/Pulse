@@ -8,7 +8,7 @@ fn plist_path() -> Result<PathBuf> {
         .context("could not determine home directory")?
         .join("Library/LaunchAgents");
 
-    std::fs::create_dir_all(dir)?;
+    std::fs::create_dir_all(&dir)?;
     Ok(dir.join("com.pulse.tick.plist"))
 }
 
@@ -18,7 +18,7 @@ fn generate_plist() -> Result<String> {
         .context("binary path is not valid UTF-8")?
         .to_string();
 
-    let interval_seconds = 60*15;
+    let interval_seconds = 60;
 
     let plist = format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>

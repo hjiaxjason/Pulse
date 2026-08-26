@@ -1,3 +1,4 @@
+/// Persisted nudge state and state managed that is written to the disk
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
@@ -9,8 +10,8 @@ use anyhow::{Context, Result};
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct AppState {
-    pub nudges: HashMap<String, DateTime<Utc>>,   // key: "water" || "stretch", value: some Utc for last
-                                              // nudge time 
+    pub nudges: HashMap<String, DateTime<Utc>>,   // key: "water" || "stretch" || "event::meeting", value: some Utc timestamp
+    pub paused_at: Option<DateTime<Utc>>,
 }
 
 impl AppState {
@@ -26,11 +27,23 @@ impl AppState {
         Ok(())
     }
 
-    pub fn load(&mut self, path_override: Option<&Path>) -> Result<()> {
+    pub fn resume(&mut self) {
+        let pause_duration = Utc::now() - self.paused_at;
+        
+        for last_fired in self.nudges.values_mut() {
+            *last_fired += pause_duration;
+        }
+
+        paused_at = None;
+    }
+
+    pub fn load(path_override: Option<&Path>) -> Result<Self> {
         let path = state_path(path_override)?;
 
         if !path.exists() {
-            return Ok(());
+            return Ok(AppState {
+                nudges: HashMap::new(),
+            });
         }
 
         let file = File::open(path)?;
@@ -38,9 +51,9 @@ impl AppState {
 
         let loaded_nudges: HashMap<String, DateTime<Utc>> = serde_json::from_reader(reader)?;
 
-        self.nudges = loaded_nudges;
-
-        Ok(())
+        Ok(AppState {
+            nudges: loaded_nudges,
+        })
     }
 
     pub fn save(&self, path_override: Option<&Path>) -> Result<()> {
@@ -111,10 +124,10 @@ mod tests {
         };
         let _ = new_state.save(Some(temp_file.path()));
 
-        let _ = state.load(Some(temp_file.path()));
+        let result_state = AppState::load(Some(temp_file.path())).unwrap();
 
-        assert_eq!(state.nudges.get("water"), Some(&(now-Duration::hours(2))));
-        assert_eq!(state.nudges.get("stretch"), Some(&(now-Duration::hours(2))));
+        assert_eq!(result_state.nudges.get("water"), Some(&(now-Duration::hours(2))));
+        assert_eq!(result_state.nudges.get("stretch"), Some(&(now-Duration::hours(2))));
     }
 
     #[test]
@@ -125,7 +138,7 @@ mod tests {
         };
         let _ = state.save(Some(temp_file.path()));
 
-        let result = state.load(None);
+        let result = AppState::load(None);
         assert!(result.is_ok());
     }
 
