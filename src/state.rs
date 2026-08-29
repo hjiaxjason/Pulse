@@ -11,7 +11,21 @@ use anyhow::{Context, Result};
 #[derive(Default, Serialize, Deserialize)]
 pub struct AppState {
     pub nudges: HashMap<String, DateTime<Utc>>,   // key: "water" || "stretch" || "event::meeting", value: some Utc timestamp
-    pub paused_at: Option<DateTime<Utc>>,
+    #[serde(skip)]
+    pub phase: Phase,
+}
+
+#[derive(Default)]
+pub enum Phase {
+    #[default] WorkSession,
+    WaterBreak,
+    StretchBreak,
+}
+
+#[derive(PartialEq)]
+pub enum Break {
+    Water,
+    Stretch,
 }
 
 impl AppState {
@@ -27,14 +41,14 @@ impl AppState {
         Ok(())
     }
 
-    pub fn resume(&mut self) {
-        let pause_duration = Utc::now() - self.paused_at;
-        
-        for last_fired in self.nudges.values_mut() {
-            *last_fired += pause_duration;
-        }
+    pub fn get_break(&self) -> Result<Option<Break>> {
+        let break_type = match self.phase {
+            Phase::WaterBreak => Some(Break::Water),
+            Phase::StretchBreak => Some(Break::Stretch),
+            _ => None,
+        };
 
-        paused_at = None;
+        Ok(break_type)
     }
 
     pub fn load(path_override: Option<&Path>) -> Result<Self> {
@@ -43,6 +57,7 @@ impl AppState {
         if !path.exists() {
             return Ok(AppState {
                 nudges: HashMap::new(),
+                phase: Phase::default(),
             });
         }
 
@@ -53,6 +68,7 @@ impl AppState {
 
         Ok(AppState {
             nudges: loaded_nudges,
+            phase: Phase::default(),
         })
     }
 

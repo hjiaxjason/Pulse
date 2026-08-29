@@ -5,9 +5,6 @@ use crate::{config, notify, log, state};
 
 pub fn run_tick() -> Result<()> {
     let mut app_state = state::AppState::load(None)?; // Correct
-    if (app_state.paused_until > Utc::now) {
-        return;
-    }
     let cfg = config::load(None)?; // Correct
     for nudge in &cfg.nudges { // Correct
         let interval_delta = config::parse_duration(&nudge.interval)?;
